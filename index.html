@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penerjemah Bahasa Isyarat Tangan</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Reverted to previous state: html and body do not force 100% height and overflow hidden */
+        html, body {
+            margin: 0;
+            /* Removed height: 100%; and overflow: hidden; */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            /* Reverted padding and centering for the body */
+            padding-bottom: calc(70px + env(safe-area-inset-bottom));
+            padding-top: 2rem; /* Adjust this value as needed, e.g., 1rem, 3rem */
+        }
+        .container {
+            max-width: 900px;
+            margin-left: auto; /* Center container horizontally */
+            margin-right: auto; /* Center container horizontally */
+            /* Reverted flex properties for container */
+            /* Removed flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; */
+            padding: 1.5rem; /* Keep some padding around the content inside the container */
+            width: 100%; /* Ensure container takes full width within its flex context */
+        }
+        video, canvas {
+            border-radius: 0.75rem; /* rounded-xl */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+        }
+        /* Styles for tab content */
+        .tab-content {
+            display: none; /* Hidden by default */
+            width: 100%;
+            /* Reverted flex properties for tab-content */
+            /* Removed flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; */
+        }
+        .tab-content.active {
+            display: block; /* Shown when active */
+            /* Reverted from display: flex; */
+        }
+        /* iOS-like bottom navigation bar */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #ffffff;
+            border-top: 1px solid #e2e8f0; /* Subtle top border */
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            height: 70px; /* Height of the nav bar */
+            padding-bottom: env(safe-area-inset-bottom); /* For iPhone X series bottom bar */
+            z-index: 1000;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            cursor: pointer;
+            color: #64748b; /* text-gray-500 */
+            transition: color 0.2s ease-in-out;
+        }
+        .nav-item.active {
+            color: #3b82f6; /* text-blue-500 */
+        }
+        .nav-item svg {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 4px;
+        }
+        .nav-item span {
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600;
+        }
+        /* Adjusted styling for Instagram logo */
+        .instagram-logo {
+            width: 32px; /* Reduced size */
+            height: 32px; /* Reduced size */
+            margin-top: 0.5rem; /* Reduced space above logo */
+            color: #E1306C; /* Instagram brand color */
+        }
+        /* Reverted styling for About content */
+        #aboutContent {
+            /* Removed specific background, padding, border-radius, box-shadow, margin-top */
+            text-align: center; /* Keep text centered */
+            /* Removed flex properties for internal centering */
+            /* Removed min-height */
+            padding: 4px; /* Default padding for tab content */
+        }
+        #aboutContent p {
+            margin-bottom: 0; /* Removed specific spacing between paragraphs */
+        }
+        /* Reverted styling for "Kontak" heading */
+        .contact-heading {
+            font-size: 1rem; /* Reverted to default font size */
+            font-weight: 600; /* Reverted to default font weight */
+            color: #4a5568; /* Reverted to default gray color */
+            margin-top: 1rem; /* Reverted space above contact heading */
+            margin-bottom: 0.75rem; /* Reverted space below contact heading */
+        }
+    </style>
+</head>
+<body class="flex flex-col px-4 min-h-screen justify-center">
+    <div class="container bg-white p-6 rounded-xl shadow-lg">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">Penerjemah Bahasa Isyarat SIBI</h1>
+
+        <!-- Translator Content -->
+        <div id="translatorContent" class="tab-content active">
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-center w-full gap-6 mb-6">
+                <div class="relative w-full md:w-1/2 max-w-md">
+                    <video id="webcam" class="w-full h-auto rounded-xl" autoplay playsinline></video>
+                    <canvas id="canvas" class="absolute top-0 left-0 w-full h-full rounded-xl"></canvas>
+                </div>
+
+                <div class="w-full md:w-1/2 max-w-md bg-blue-100 p-4 rounded-lg text-center shadow-inner flex flex-col justify-center items-center h-full">
+                    <p class="text-lg text-blue-800 font-semibold mb-2">Gerakan Tangan Dikenali:</p>
+                    <p id="result" class="text-4xl font-extrabold text-blue-900">Mulai kamera...</p>
+                </div>
+            </div>
+
+            <div id="error-message" class="hidden mt-4 p-3 bg-red-100 text-red-700 rounded-lg w-full max-w-md text-center">
+                Terjadi kesalahan: <span id="error-text"></span>
+            </div>
+        </div>
+
+        <!-- About Content -->
+        <div id="aboutContent" class="tab-content">
+            <p class="text-md text-gray-600">Copyright Nuning Rizka Lutfiah</p>
+            <p class="text-md text-gray-600">Institut Teknologi Mojosari, Nganjuk Jawa Timur</p>
+            <p class="text-md text-gray-600">2025</p>
+            <p class="contact-heading text-center">Kontak</p> <!-- Applied new class for styling -->
+            <a href="https://www.instagram.com/nuningrz_/" target="_blank" class="block">
+                <svg class="instagram-logo mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                    <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <div id="navTranslator" class="nav-item active">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-globe">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+                <path d="M2 12h20"/>
+            </svg>
+            <span>Penerjemah</span>
+        </div>
+        <div id="navAbout" class="nav-item">
+            <!-- Updated SVG for the "About" icon -->
+            
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-help-circle">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.81 1c0 2-3 3-3 3"/>
+                <path d="M12 17h.01"/>
+            </svg>
+            <span>Tentang</span>
+        </div>
+    </nav>
+
+    <!-- MediaPipe Gesture Recognizer CDN -->
+    <script type="module">
+        import { GestureRecognizer, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+
+        let gestureRecognizer;
+        let runningMode = "VIDEO";
+        let webcamRunning = false;
+        const video = document.getElementById("webcam");
+        const canvasElement = document.getElementById("canvas");
+        const canvasCtx = canvasElement.getContext("2d");
+        const resultElement = document.getElementById("result");
+        const errorMessageDiv = document.getElementById("error-message");
+        const errorTextSpan = document.getElementById("error-text");
+
+        // Get references to content sections
+        const translatorContent = document.getElementById("translatorContent");
+        const aboutContent = document.getElementById("aboutContent");
+
+        // Get references to new bottom navigation items
+        const navTranslator = document.getElementById("navTranslator");
+        const navAbout = document.getElementById("navAbout");
+
+        // Function to display error messages
+        function displayError(message) {
+            errorTextSpan.textContent = message;
+            errorMessageDiv.classList.remove("hidden");
+            resultElement.textContent = "Terjadi kesalahan";
+        }
+
+        // Function to stop webcam stream and clear canvas
+        function stopWebcam() {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+            webcamRunning = false;
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height); // Clear canvas
+        }
+
+        // Function to switch between tabs
+        function switchTab(tabName) {
+            // Deactivate all navigation items
+            navTranslator.classList.remove("active");
+            navAbout.classList.remove("active");
+
+            // Deactivate all content sections
+            translatorContent.classList.remove("active");
+            aboutContent.classList.remove("active");
+
+            // Activate the selected tab and its content
+            if (tabName === "translator") {
+                navTranslator.classList.add("active");
+                translatorContent.classList.add("active");
+                startWebcam(); // Start webcam when translator tab is active
+            } else if (tabName === "about") {
+                navAbout.classList.add("active");
+                aboutContent.classList.add("active");
+                stopWebcam(); // Stop webcam when about tab is active
+            }
+        }
+
+        // Initialize the Gesture Recognizer
+        async function createGestureRecognizer() {
+            try {
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+                );
+                gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: "https://raw.githubusercontent.com/ErikSih/Test-Model/main/gesture_recognizer.task",
+                        delegate: "GPU"
+                    },
+                    runningMode: runningMode,
+                    numHands: 1 // Only detect one hand for simplicity
+                });
+                console.log("Gesture Recognizer siap.");
+                // Start webcam only if translator tab is active initially
+                if (translatorContent.classList.contains("active")) {
+                    startWebcam();
+                }
+            } catch (error) {
+                console.error("Gagal memuat Gesture Recognizer:", error);
+                displayError("Gagal memuat model pengenalan gerakan. Coba muat ulang halaman.");
+            }
+        }
+
+        // Start webcam stream
+        async function startWebcam() {
+            if (webcamRunning) {
+                // Already running, no need to restart unless explicitly stopped
+                return;
+            }
+
+            try {
+                const constraints = { video: true };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                video.addEventListener("loadeddata", predictWebcam);
+                webcamRunning = true;
+                resultElement.textContent = "Siap mendeteksi...";
+            } catch (error) {
+                console.error("Gagal mengakses kamera:", error);
+                displayError("Gagal mengakses kamera. Pastikan Anda memberikan izin kamera.");
+            }
+        }
+
+        let lastVideoTime = -1;
+        let results = undefined;
+        const drawingUtils = new DrawingUtils(canvasCtx);
+
+        async function predictWebcam() {
+            // Only continue prediction if webcam is running and the translator tab is active
+            if (!webcamRunning || !translatorContent.classList.contains("active")) {
+                return;
+            }
+
+            if (runningMode === "IMAGE") {
+                runningMode = "VIDEO";
+                await gestureRecognizer.setOptions({ runningMode: "VIDEO" });
+            }
+
+            let nowInMs = performance.now();
+            if (lastVideoTime !== video.currentTime) {
+                lastVideoTime = video.currentTime;
+                // Ensure gestureRecognizer is not null before using it
+                if (gestureRecognizer) {
+                    results = gestureRecognizer.recognizeForVideo(video, nowInMs);
+                } else {
+                    // If recognizer is not ready, just clear canvas and skip prediction
+                    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+                    window.requestAnimationFrame(predictWebcam);
+                    return;
+                }
+            }
+
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+
+            canvasElement.width = videoWidth;
+            canvasElement.height = videoHeight;
+
+            if (results && results.landmarks) {
+                for (const landmarks of results.landmarks) {
+                    drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, {
+                        color: "#00FF00",
+                        lineWidth: 5
+                    });
+                    drawingUtils.drawLandmarks(landmarks, {
+                        color: "#FF0000",
+                        lineWidth: 2
+                    });
+                }
+            }
+
+            canvasCtx.restore();
+
+            if (results && results.gestures.length > 0) {
+                const categoryName = results.gestures[0][0].categoryName;
+                const score = parseFloat(results.gestures[0][0].score * 100).toFixed(2);
+                resultElement.textContent = `${categoryName} (${score}%)`;
+            } else {
+                resultElement.textContent = "-";
+            }
+
+            // Call this function again to keep predicting when the browser is ready.
+            if (webcamRunning && translatorContent.classList.contains("active")) {
+                window.requestAnimationFrame(predictWebcam);
+            }
+        }
+
+        // Event Listeners for Bottom Navigation Items
+        navTranslator.addEventListener("click", () => switchTab("translator"));
+        navAbout.addEventListener("click", () => switchTab("about"));
+
+        // Initialize when the window loads
+        window.onload = () => {
+            createGestureRecognizer();
+            switchTab("translator"); // Ensure translator tab is active on load
+        };
+    </script>
+</body>
+</html>
