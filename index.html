@@ -335,7 +335,7 @@
             if (results && results.gestures.length > 0) {
                 const categoryName = results.gestures[0][0].categoryName;
                 const score = parseFloat(results.gestures[0][0].score * 100).toFixed(2);
-                resultElement.textContent = `${categoryName} (${score}%)`;
+                resultElement.textContent = `${categoryName} <br> (${score}%)`;
             } else {
                 resultElement.textContent = "-";
             }
